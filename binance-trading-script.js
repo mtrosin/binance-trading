@@ -95,6 +95,8 @@ const fetchCandlestickData = () => {
 
     // Use only the last 'limit' number of candles
     const candles = ticks.slice(-limit);
+    binance.futuresLeverage( symbol, 10 );
+    binance.futuresMarginType( symbol, 'ISOLATED' );
 
     // Check trading signals based on the strategy
     checkTradingSignal(candles);
