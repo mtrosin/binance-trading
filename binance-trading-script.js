@@ -38,8 +38,18 @@ const calculateRSI = (closes, period) => {
   return 100 - (100 / (1 + relativeStrength));
 };
 
+// Function to fetch and log open positions
+const getOpenPositions = async () => {
+  try {
+    const data = await binance.futuresAccount();
+    return data.positions.filter((position) => parseFloat(position.positionAmt) !== 0).length;
+  } catch (error) {
+    console.error('Error fetching account information:', error.body);
+  }
+};
+
 // Function to check trading signals
-const checkTradingSignal = (candles) => {
+const checkTradingSignal = async (candles) => {
   const closes = candles.map((candle) => parseFloat(candle[4]));
 
   const emaShort = calculateEMA(closes, emaShortPeriod);
@@ -48,11 +58,13 @@ const checkTradingSignal = (candles) => {
   const rsi = calculateRSI(closes, rsiPeriod);
 
   console.log('Running');
-  if (!inPosition) {
+  let totalPositions = await getOpenPositions();
+  console.log(inPosition, totalPositions);
+  if (!inPosition && totalPositions === 0) {
+    console.log('a');
     // Check for a buy signal
     if (emaShort > emaLong && rsi < oversoldThreshold) {
-      console.log('Opening long position, emaShort='+emaShort+', emaLong='+emaLong);
-      console.info( binance.futuresAccount() );
+      console.log('pening long position, emaShort='+emaShort+', emaLong='+emaLong);
       // Implement your logic to open a long position here
       binance.futuresMarketBuy(symbol, 0.5);
       inPosition = true;
@@ -61,16 +73,15 @@ const checkTradingSignal = (candles) => {
     // Check for a sell signal
     if (emaShort < emaLong && rsi > overboughtThreshold) {
       console.log('Opening short position, emaShort='+emaShort+', emaLong='+emaLong);
-      console.info( binance.futuresAccount() );
       // Implement your logic to open a short position here
-      binance.futuresMarketSell(symbol, 0.5);
+      binance.futuresMarketSell(symbol, 0.5); 
       inPosition = true;
     }
   } else {
+    console.log('b');
     // Check for a sell signal to close the position
     if (emaShort < emaLong || rsi > overboughtThreshold) {
       console.log('Closing long position, emaShort='+emaShort+', emaLong='+emaLong);
-      console.info( binance.futuresAccount() );
       // Implement your logic to close the position here
       binance.futuresMarketSell(symbol, 0.5);
       inPosition = false;
@@ -79,7 +90,6 @@ const checkTradingSignal = (candles) => {
     // Check for a buy signal to close the short position
     if (emaShort > emaLong || rsi < oversoldThreshold) {
       console.log('Closing short position, emaShort='+emaShort+', emaLong='+emaLong);
-      console.info( binance.futuresAccount() );
       // Implement your logic to close the short position here
       binance.futuresMarketBuy(symbol, 0.5);
       inPosition = false;
